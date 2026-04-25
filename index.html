@@ -218,6 +218,8 @@ h1 span{color:var(--a);text-shadow:0 0 18px var(--a)}
       <div class="stamp">NOT USG</div>
       <div class="live-ind"><div class="ldot"></div>LIVE DATA</div>
       <div id="clock">--:--:-- UTC</div>
+      <div id="clock-pt" style="font-size:10px;color:rgba(0,255,65,.4);text-align:right">--:--:-- PT (Nevada)</div>
+      <div id="janet-window" style="font-size:9px;letter-spacing:2px;margin-top:2px;text-align:right">JANET OPS: --</div>
       <div class="live-ind" style="margin-top:4px"><div class="ldot green" id="api-dot"></div><span id="api-label" style="font-size:10px;letter-spacing:1px">CONNECTING...</span></div>
     </div>
   </div>
@@ -395,7 +397,36 @@ const JANET_TAILS = ['N4529W','N5294E','N5294M','N5175U','N5176Y','N5177C','N654
 // ─── CLOCK ───────────────────────────────────────────────
 function tick(){
   const n=new Date(), p=v=>String(v).padStart(2,'0');
-  document.getElementById('clock').textContent=`${p(n.getUTCHours())}:${p(n.getUTCMinutes())}:${p(n.getUTCSeconds())} UTC`;
+
+  // UTC clock
+  document.getElementById('clock').textContent=
+    `${p(n.getUTCHours())}:${p(n.getUTCMinutes())}:${p(n.getUTCSeconds())} UTC`;
+
+  // Nevada local time (America/Los_Angeles — PT, handles DST automatically)
+  const ptStr=n.toLocaleTimeString('en-US',{
+    timeZone:'America/Los_Angeles',
+    hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+  });
+  document.getElementById('clock-pt').textContent=`${ptStr} PT (Nevada)`;
+
+  // Janet ops window indicator
+  const ptHour=parseInt(n.toLocaleString('en-US',{timeZone:'America/Los_Angeles',hour:'numeric',hour12:false}));
+  const dayPT=new Date(n.toLocaleString('en-US',{timeZone:'America/Los_Angeles'})).getDay();
+  const isWeekend=dayPT===0||dayPT===6;
+  const isPrimary=!isWeekend && ptHour>=5 && ptHour<18;   // 0500–1800 PST weekdays
+  const isReduced=isWeekend || (ptHour>=18||ptHour<5);    // weekends or off-hours
+
+  const jw=document.getElementById('janet-window');
+  if(isPrimary){
+    jw.textContent='JANET OPS: ACTIVE WINDOW';
+    jw.style.color='var(--g)';
+  } else if(isWeekend){
+    jw.textContent='JANET OPS: WEEKEND — REDUCED';
+    jw.style.color='var(--a)';
+  } else {
+    jw.textContent='JANET OPS: OFF SHIFT';
+    jw.style.color='rgba(0,255,65,.35)';
+  }
 }
 setInterval(tick,1000); tick();
 
@@ -599,8 +630,9 @@ async function loadFlights(){
 
     // Estimate flight count from corridor traffic + time of day
     const h=new Date().getUTCHours();
-    const isWorkday=[1,2,3,4,5].includes(new Date().getUTCDay());
-    const estFlights=isWorkday?Math.min(22,Math.max(0,Math.round(h*22/17))):2;
+    const ptDay=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Los_Angeles'})).getDay();
+    const isWeekend=ptDay===0||ptDay===6;
+    const estFlights=isWeekend?Math.floor(Math.random()*3):Math.min(22,Math.max(0,Math.round(h*22/17)));
     document.getElementById('flight-count').textContent=janetCount>0?janetCount:estFlights;
     document.getElementById('to-groom').textContent=janetCount>0?Math.ceil(janetCount*.6):Math.round(estFlights*.6);
     document.getElementById('to-ttr').textContent=janetCount>0?Math.floor(janetCount*.35):Math.round(estFlights*.35);
@@ -678,8 +710,9 @@ function renderOpenSkyFlights(janet, all, total){
 function loadFlightsFallback(){
   // Time-based estimate when OpenSky is unavailable
   const h=new Date().getUTCHours();
-  const isWorkday=[1,2,3,4,5].includes(new Date().getUTCDay());
-  const est=isWorkday?Math.min(22,Math.max(0,Math.round(h*22/17))):0;
+  const ptDay=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Los_Angeles'})).getDay();
+  const isWeekend=ptDay===0||ptDay===6;
+  const est=isWeekend?Math.floor(Math.random()*3):Math.min(22,Math.max(0,Math.round(h*22/17)));
   document.getElementById('flight-count').textContent=est||'--';
   document.getElementById('to-groom').textContent=Math.round(est*.6)||'--';
   document.getElementById('to-ttr').textContent=Math.round(est*.35)||'--';
@@ -802,21 +835,38 @@ function animateBars(){
 
 // ─── THREAT METER ────────────────────────────────────────
 function updateThreat(janetLive=0){
-  const h=new Date().getUTCHours();
-  const isWorkday=[1,2,3,4,5].includes(new Date().getUTCDay());
+  const n=new Date();
+  // Use Nevada local time for ops assessment
+  const ptHour=parseInt(n.toLocaleString('en-US',{timeZone:'America/Los_Angeles',hour:'numeric',hour12:false}));
+  const dayPT=new Date(n.toLocaleString('en-US',{timeZone:'America/Los_Angeles'})).getDay();
+  const isWeekend=dayPT===0||dayPT===6;
+  const isPeakOps=!isWeekend && ptHour>=5 && ptHour<18;   // primary Janet window
+  const isWeekendOps=isWeekend && ptHour>=6 && ptHour<16; // weekend King Air window
+
   // Score: 1 (quiet) to 5 (very active)
   let score=1;
-  if(isWorkday)score+=2;
-  if(h>=12&&h<=22)score+=1; // peak Janet hours UTC = morning PST
+  if(isPeakOps)score+=2;        // weekday ops window: +2
+  else if(isWeekendOps)score+=1; // weekend possible ops: +1
+  if(ptHour>=5&&ptHour<9)score=Math.min(5,score+1); // peak departure window 0500-0900 PT
   const notamActive=document.getElementById('airspace-status').textContent.includes('ACTIVE');
   if(notamActive)score=Math.min(5,score+1);
   if(janetLive>0)score=Math.min(5,score+1);
+
   const colors={1:'var(--g)',2:'var(--g)',3:'var(--a)',4:'var(--a)',5:'var(--r)'};
   const labels={1:'QUIET',2:'LOW',3:'ELEVATED',4:'HEIGHTENED',5:'SIGNIFICANT'};
   document.getElementById('threat-num').textContent=score;
   document.getElementById('threat-num').style.color=colors[score];
   document.getElementById('threat-lbl').textContent=labels[score];
   document.getElementById('threat-lbl').style.color=colors[score];
+
+  // Update threat sub-text with context
+  const sub=document.querySelector('.threat-sub');
+  if(sub){
+    const ctx=isWeekend?'Weekend — reduced 737 ops, King Air possible':
+              isPeakOps?'Weekday ops window active':
+              'Off-shift hours';
+    sub.textContent=`${ctx} // PT hour: ${ptHour}:00`;
+  }
 }
 
 // ─── RADAR BLIP DRIFT ────────────────────────────────────
