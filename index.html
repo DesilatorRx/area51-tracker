@@ -232,10 +232,10 @@ h1 span{color:var(--a);text-shadow:0 0 18px var(--a)}
 
 <!-- API KEY INPUT -->
 <div class="apibar">
-  <label>ADSB EXCHANGE API KEY (RAPIDAPI):</label>
-  <input type="text" id="adsbkey" placeholder="paste your RapidAPI key for live Janet tracking..." />
-  <button class="abtn" onclick="loadADSB()">ACTIVATE</button>
-  <span class="api-status" id="adsbstatus" style="color:rgba(255,179,0,.5)">⬤ STANDBY — demo data shown</span>
+  <label>FLIGHT DATA:</label>
+  <span class="api-status" id="adsbstatus" style="color:rgba(255,179,0,.5)">⬤ CONNECTING TO OPENSKY NETWORK...</span>
+  <span style="font-size:10px;color:rgba(255,179,0,.4);margin-left:12px">Free live ADS-B — KLAS→Groom Lake corridor // Known Janet tail numbers flagged // Transponder lost ~60nm NW of KLAS</span>
+  <button class="abtn" onclick="loadFlights()" style="margin-left:auto">↺ REFRESH</button>
 </div>
 
 <!-- ALERT TICKER -->
@@ -319,13 +319,13 @@ h1 span{color:var(--a);text-shadow:0 0 18px var(--a)}
   </div>
 
   <div class="panel">
-    <div class="plbl">Janet Fleet Activity <span class="src" id="adsb-src">DEMO DATA</span></div>
+    <div class="plbl">Janet Fleet Activity <span class="src" id="adsb-src">OPENSKY LIVE</span></div>
     <div class="ftbl-hdr"><div>CALLSIGN</div><div>ROUTE</div><div>AIRCRAFT</div><div>STATUS</div><div>ALT/GS</div></div>
     <div id="flight-table">
       <!-- populated by JS -->
     </div>
     <div class="fadsbx-note" id="adsb-note">
-      ⬡ Demo data shown. Enter RapidAPI ADS-B Exchange key above to enable live Janet tail number tracking (N4529W, N5294E, N5294M, N5175U, N5176Y, N5177C).
+      ⬡ Connecting to OpenSky Network free feed... Aircraft in KLAS→Groom Lake corridor (100×300nm box). Known Janet tail numbers highlighted in amber. Transponder signal lost ~60nm NW of Las Vegas — this is normal and expected.
     </div>
   </div>
 </div>
@@ -574,80 +574,118 @@ function renderNOTAMsFallback(){
   addTicker('FAA NOTAM: R-4808N ACTIVE — Groom Box hot. Restricted SFC-UNL.');
 }
 
-// ─── DEMO FLIGHT DATA ────────────────────────────────────
-function loadDemoFlights(){
-  const h=new Date().getUTCHours();
-  const estFlights=Math.min(22,Math.max(0,Math.round(h*22/17)));
-  document.getElementById('flight-count').textContent=estFlights;
-  document.getElementById('to-groom').textContent=Math.round(estFlights*.6);
-  document.getElementById('to-ttr').textContent=Math.round(estFlights*.35);
-  document.getElementById('last-janet').textContent=`~${5+Math.floor(Math.random()*15)}m ago`;
-
-  const flights=[
-    {cs:'JANET 412',route:'KLAS→KXTA',acft:'B737-600',status:'air',alt:'11,200ft'},
-    {cs:'JANET 394',route:'KLAS→XSD',acft:'B737-600',status:'air',alt:'9,800ft'},
-    {cs:'JANET 396',route:'KLAS→XSD',acft:'B737-600',status:'air',alt:'8,400ft'},
-    {cs:'JANET 6',route:'KLAS→[REDACTED]',acft:'King Air 350',status:'air',alt:'6,200ft'},
-    {cs:'JANET 384',route:'KLAS→KXTA',acft:'B737-600',status:'gnd',alt:'GND'},
-    {cs:'JANET 362',route:'KXTA→KLAS',acft:'B737-600',status:'dep',alt:'CLB'},
-    {cs:'JANET 4',route:'KLAS→KXTA',acft:'King Air 200C',status:'gnd',alt:'GND'},
-    {cs:'JANET 29',route:'PMD→KXTA',acft:'B737-600',status:'unk',alt:'--'},
-  ];
-  const tbl=document.getElementById('flight-table'); tbl.innerHTML='';
-  flights.forEach((f,i)=>{
-    const sc={air:'air',gnd:'gnd',dep:'dep',unk:'unk'}[f.status];
-    const sl={air:'AIRBORNE',gnd:'ON GROUND',dep:'DEPARTING',unk:'UNKNOWN'}[f.status];
-    const row=document.createElement('div'); row.className='frow'; row.style.animationDelay=`${i*.04}s`;
-    row.innerHTML=`<div class="cs">${f.cs}</div><div style="font-size:9px;color:var(--gd)">${f.route}</div><div style="font-size:9px;color:var(--gd)">${f.acft}</div><div class="fstat ${sc}">${sl}</div><div class="falt">${f.alt}</div>`;
-    tbl.appendChild(row);
-  });
-  document.getElementById('janet-status').textContent=`${estFlights} FLIGHTS EST.`;
-  document.getElementById('api-label').textContent='DEMO MODE';
-}
-
-// ─── ADS-B LIVE ──────────────────────────────────────────
-async function loadADSB(){
-  const key=document.getElementById('adsbkey').value.trim();
-  if(!key){document.getElementById('adsbstatus').textContent='⚠ Enter API key first';return;}
-  document.getElementById('adsbstatus').textContent='⬤ CONNECTING...';
+// ─── OPENSKY LIVE FLIGHTS ────────────────────────────────
+async function loadFlights(){
+  document.getElementById('adsbstatus').textContent='⬤ QUERYING OPENSKY...';
   document.getElementById('adsbstatus').style.color='var(--a)';
   try{
-    // Query 100nm radius of Groom Lake
-    const url=`https://adsbexchange-com1.p.rapidapi.com/v2/lat/${GROOM_LAT}/lon/${GROOM_LON}/dist/100/`;
-    const r=await fetch(url,{headers:{'x-rapidapi-key':key,'x-rapidapi-host':'adsbexchange-com1.p.rapidapi.com'}});
-    if(!r.ok)throw new Error('ADS-B API '+r.status);
+    const r=await fetch('/api/flights');
+    if(!r.ok)throw new Error('flights API '+r.status);
     const d=await r.json();
-    const ac=d.ac||[];
-    const janetFlights=ac.filter(a=>JANET_TAILS.some(t=>a.r&&a.r.replace('-','').includes(t.replace('-','')))||
-      (a.flight&&a.flight.trim().toUpperCase().startsWith('JANET')));
-    renderLiveFlights(ac, janetFlights);
-    document.getElementById('adsbstatus').textContent=`⬤ LIVE — ${ac.length} aircraft, ${janetFlights.length} Janet`;
-    document.getElementById('adsbstatus').style.color='var(--g)';
-    document.getElementById('adsb-src').textContent='ADS-B EXCHANGE LIVE';
-    document.getElementById('adsb-note').textContent=`Live data: ${ac.length} total aircraft within 100nm. ${janetFlights.length} possible Janet contacts. Last updated: ${new Date().toUTCString()}`;
-    document.getElementById('api-label').textContent='LIVE ADS-B';
+
+    const janet=[...d.janetLive, ...d.janetDepartures];
+    const total=d.totalInBbox||0;
+
+    // Update status indicators
+    const janetCount=janet.length;
+    document.getElementById('adsbstatus').textContent=
+      janetCount>0
+        ? `⬤ LIVE — ${total} aircraft in corridor, ${janetCount} JANET CONTACT${janetCount>1?'S':''}`
+        : `⬤ LIVE — ${total} aircraft in corridor, no Janet on transponder`;
+    document.getElementById('adsbstatus').style.color=janetCount>0?'var(--g)':'var(--a)';
+    document.getElementById('adsb-src').textContent='OPENSKY LIVE';
     document.getElementById('adsb-cov').textContent='Live Feed';
-    addTicker(`ADS-B LIVE: ${ac.length} aircraft tracked within 100nm of KXTA. ${janetFlights.length} Janet contacts.`);
-    document.getElementById('flight-count').textContent=janetFlights.length||'<2';
+    document.getElementById('api-label').textContent='OPENSKY LIVE';
+
+    // Estimate flight count from corridor traffic + time of day
+    const h=new Date().getUTCHours();
+    const isWorkday=[1,2,3,4,5].includes(new Date().getUTCDay());
+    const estFlights=isWorkday?Math.min(22,Math.max(0,Math.round(h*22/17))):2;
+    document.getElementById('flight-count').textContent=janetCount>0?janetCount:estFlights;
+    document.getElementById('to-groom').textContent=janetCount>0?Math.ceil(janetCount*.6):Math.round(estFlights*.6);
+    document.getElementById('to-ttr').textContent=janetCount>0?Math.floor(janetCount*.35):Math.round(estFlights*.35);
+    document.getElementById('last-janet').textContent=
+      d.janetDepartures.length>0
+        ? `Departed KLAS ${timeSince(d.janetDepartures[0].departure*1000)}`
+        : janetCount>0?'ON TRANSPONDER NOW':'No recent sighting';
+    document.getElementById('janet-status').textContent=
+      janetCount>0?`${janetCount} JANET LIVE`:`${estFlights} EST.`;
+
+    // Render flight table
+    renderOpenSkyFlights(janet, d.allAircraft||[], total);
+
+    document.getElementById('adsb-note').textContent=
+      `OpenSky Network live feed. ${total} aircraft in KLAS→Groom Lake corridor. `+
+      (janetCount>0
+        ? `${janetCount} known Janet tail number(s) on transponder. `
+        : `No Janet tails on transponder — likely pre-departure or transponder off. `)+
+      `Last updated: ${new Date().toUTCString()}`;
+
+    addTicker(`OPENSKY: ${total} aircraft in corridor. ${janetCount>0?janetCount+' Janet contact(s) live.':'No Janet transponder signal — ops normal.'}`);
+    apiStatus.adsb=true; setApiStatus(apiStatus);
+    updateThreat(janetCount);
+
   }catch(e){
-    document.getElementById('adsbstatus').textContent='⚠ API ERROR: '+e.message;
+    document.getElementById('adsbstatus').textContent='⚠ OpenSky error — using time-based estimate';
     document.getElementById('adsbstatus').style.color='var(--r)';
-    console.error('ADS-B error',e);
+    loadFlightsFallback();
+    console.error('OpenSky error',e);
   }
+  // Refresh every 60s (OpenSky anonymous rate limit is 10s, proxy caches 30s)
+  setTimeout(loadFlights, 60000);
 }
 
-function renderLiveFlights(all, janet){
+function renderOpenSkyFlights(janet, all, total){
   const tbl=document.getElementById('flight-table'); tbl.innerHTML='';
-  const show=janet.length?janet:all.slice(0,10);
+
+  // Show Janet contacts first, then fill with interesting corridor traffic
+  const interesting=all
+    .filter(a=>!a.isJanet && a.callsign && a.lat && !a.onGround)
+    .sort((a,b)=>{
+      // Prioritize aircraft heading NW toward Groom Lake
+      const aHeadingNW=a.heading>270||a.heading<360;
+      const bHeadingNW=b.heading>270||b.heading<360;
+      return (bHeadingNW?1:0)-(aHeadingNW?1:0);
+    })
+    .slice(0,6);
+
+  const show=[...janet, ...interesting].slice(0,10);
+
+  if(!show.length){
+    tbl.innerHTML='<div style="font-size:10px;color:var(--gd);padding:8px 0">No aircraft currently tracked in corridor. OpenSky coverage in remote Nevada is limited — Janet transponders may already be off.</div>';
+    return;
+  }
+
   show.forEach((a,i)=>{
-    const cs=(a.flight||a.r||'UNKNOWN').trim();
-    const isJ=janet.includes(a);
-    const stat=a.alt_baro==='ground'?'gnd':a.alt_baro?'air':'unk';
+    const isJ=a.isJanet;
+    const cs=(a.callsign||a.tailNumber||a.icao24||'UNKNOWN').trim();
+    const stat=a.onGround?'gnd':a.altBaro&&a.altBaro>0?'air':'unk';
     const sl={air:'AIRBORNE',gnd:'ON GROUND',unk:'UNKNOWN'}[stat];
+    // Convert meters to feet
+    const altFt=a.altBaro?Math.round(a.altBaro*3.281).toLocaleString()+'ft':'--';
+    const spdKt=a.velocity?Math.round(a.velocity*1.944)+'kt':'--';
     const row=document.createElement('div'); row.className='frow'; row.style.animationDelay=`${i*.04}s`;
-    row.innerHTML=`<div class="cs" style="color:${isJ?'var(--a)':'var(--g)'}">${cs}</div><div style="font-size:9px;color:var(--gd)">${a.r||'--'}</div><div style="font-size:9px;color:var(--gd)">${a.t||a.category||'--'}</div><div class="fstat ${stat}">${sl}</div><div class="falt">${a.alt_baro==='ground'?'GND':a.alt_baro?Math.round(a.alt_baro).toLocaleString()+'ft':'--'}</div>`;
+    row.innerHTML=`
+      <div class="cs" style="color:${isJ?'var(--a)':'var(--g)'}">${isJ?'★ ':''  }${cs}</div>
+      <div style="font-size:9px;color:var(--gd)">${a.tailNumber||a.icao24||'--'}</div>
+      <div style="font-size:9px;color:var(--gd)">${isJ?'JANET FLEET':'Corridor traffic'}</div>
+      <div class="fstat ${stat}">${sl}</div>
+      <div class="falt">${a.onGround?'GND':altFt}</div>`;
     tbl.appendChild(row);
   });
+}
+
+function loadFlightsFallback(){
+  // Time-based estimate when OpenSky is unavailable
+  const h=new Date().getUTCHours();
+  const isWorkday=[1,2,3,4,5].includes(new Date().getUTCDay());
+  const est=isWorkday?Math.min(22,Math.max(0,Math.round(h*22/17))):0;
+  document.getElementById('flight-count').textContent=est||'--';
+  document.getElementById('to-groom').textContent=Math.round(est*.6)||'--';
+  document.getElementById('to-ttr').textContent=Math.round(est*.35)||'--';
+  document.getElementById('last-janet').textContent='OpenSky unavailable';
+  const tbl=document.getElementById('flight-table');
+  tbl.innerHTML='<div style="font-size:10px;color:var(--gd);padding:8px 0">⚠ OpenSky Network unavailable. Flight count is time-based estimate only. Janet flights are most active 0500–0800 PST weekdays.</div>';
 }
 
 // ─── SATELLITE TIMELINE ──────────────────────────────────
@@ -763,7 +801,7 @@ function animateBars(){
 }
 
 // ─── THREAT METER ────────────────────────────────────────
-function updateThreat(){
+function updateThreat(janetLive=0){
   const h=new Date().getUTCHours();
   const isWorkday=[1,2,3,4,5].includes(new Date().getUTCDay());
   // Score: 1 (quiet) to 5 (very active)
@@ -772,6 +810,7 @@ function updateThreat(){
   if(h>=12&&h<=22)score+=1; // peak Janet hours UTC = morning PST
   const notamActive=document.getElementById('airspace-status').textContent.includes('ACTIVE');
   if(notamActive)score=Math.min(5,score+1);
+  if(janetLive>0)score=Math.min(5,score+1);
   const colors={1:'var(--g)',2:'var(--g)',3:'var(--a)',4:'var(--a)',5:'var(--r)'};
   const labels={1:'QUIET',2:'LOW',3:'ELEVATED',4:'HEIGHTENED',5:'SIGNIFICANT'};
   document.getElementById('threat-num').textContent=score;
@@ -816,7 +855,7 @@ const apiStatus={weather:false,quakes:false,notam:false,adsb:false};
 (async()=>{
   buildSatUI();
   animateBars();
-  loadDemoFlights();
+  loadFlights();
   updateThreat();
 
   // Load live APIs concurrently
