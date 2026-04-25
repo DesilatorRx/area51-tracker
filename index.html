@@ -192,10 +192,59 @@ h1 span{color:var(--a);text-shadow:0 0 18px var(--a)}
 .footer{border-top:1px solid var(--bdr);padding-top:10px;margin-top:4px;font-size:9px;color:rgba(0,255,65,.22);letter-spacing:2px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
 .cur::after{content:'█';animation:blink 1s step-end infinite}
 
+/* PANEL EXPAND */
+.panel{cursor:pointer}
+.panel .expand-hint{position:absolute;top:10px;right:12px;font-size:9px;color:rgba(0,255,65,.25);letter-spacing:1px;transition:color .2s;pointer-events:none}
+.panel:hover .expand-hint{color:rgba(0,255,65,.6)}
+.panel:hover{border-color:var(--bdh);box-shadow:0 0 14px rgba(0,255,65,.07)}
+
+/* MODAL OVERLAY */
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,5,1,.92);z-index:2000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex;animation:fadeUp .2s ease}
+.modal-box{background:#020f04;border:1px solid var(--bdh);box-shadow:0 0 60px rgba(0,255,65,.15),inset 0 0 60px rgba(0,255,65,.02);width:100%;max-width:900px;max-height:90vh;overflow-y:auto;position:relative;padding:28px 32px}
+.modal-box::-webkit-scrollbar{width:4px}
+.modal-box::-webkit-scrollbar-thumb{background:var(--gk)}
+.modal-box::before{content:'// EXPANDED VIEW // CLICK OUTSIDE OR PRESS ESC TO CLOSE //';display:block;font-size:9px;color:var(--gd);letter-spacing:2px;margin-bottom:16px;border-bottom:1px solid var(--bdr);padding-bottom:10px}
+.modal-close{position:absolute;top:16px;right:20px;font-size:11px;color:var(--gd);cursor:pointer;letter-spacing:2px;border:1px solid var(--bdr);padding:3px 10px;transition:all .2s}
+.modal-close:hover{color:var(--g);border-color:var(--g)}
+.modal-title{font-family:'Orbitron',monospace;font-size:16px;font-weight:700;letter-spacing:3px;color:var(--g);text-shadow:0 0 15px var(--g);margin-bottom:20px}
+.modal-content{font-size:14px;line-height:1.8}
+
+/* Enlarged versions of key elements inside modal */
+.modal-content .bnum{font-size:100px}
+.modal-content .unit{font-size:13px;letter-spacing:3px}
+.modal-content .msub{font-size:13px}
+.modal-content .qrow{font-size:13px;padding:8px 0}
+.modal-content .qmag{font-size:38px}
+.modal-content .wx-val{font-size:48px}
+.modal-content .wx-lbl{font-size:12px}
+.modal-content .nrow{font-size:13px;padding:10px 0}
+.modal-content .ntxt{font-size:13px;line-height:1.7}
+.modal-content .frow{font-size:13px;padding:8px 0;grid-template-columns:110px 130px 1fr 100px 80px}
+.modal-content .ftbl-hdr{font-size:10px;grid-template-columns:110px 130px 1fr 100px 80px}
+.modal-content .stl-yr{font-size:28px}
+.modal-content .stl-txt{font-size:13px}
+.modal-content .bar-row{font-size:13px}
+.modal-content .blbl{width:180px;font-size:11px}
+.modal-content .btrk{height:18px}
+.modal-content .threat-num{font-size:120px}
+.modal-content .threat-lbl{font-size:16px;letter-spacing:4px}
+.modal-content .threat-sub{font-size:12px}
+.modal-content .rinfo div{font-size:13px;padding:5px 0}
+
 /* RESPONSIVE */
 @media(max-width:900px){.g3,.g21,.g12{grid-template-columns:1fr 1fr}.g2{grid-template-columns:1fr}}
-@media(max-width:600px){.g3,.g21,.g12,.g2{grid-template-columns:1fr}.ftbl-hdr,.frow{grid-template-columns:80px 90px 1fr 60px}.falt{display:none}}
+@media(max-width:600px){.g3,.g21,.g12,.g2{grid-template-columns:1fr}.ftbl-hdr,.frow{grid-template-columns:80px 90px 1fr 60px}.falt{display:none}.modal-box{padding:20px 16px}}
 </style>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box" id="modal-box">
+    <div class="modal-close" onclick="closeModal()">✕ CLOSE</div>
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-content" id="modal-content"></div>
+  </div>
+</div>
 </head>
 <body>
 <div class="wrap">
@@ -248,21 +297,24 @@ h1 span{color:var(--a);text-shadow:0 0 18px var(--a)}
 
 <!-- TOP METRICS ROW -->
 <div class="g3">
-  <div class="panel" style="animation-delay:.1s">
+  <div class="panel" style="animation-delay:.1s" onclick="expandPanel(this)">
+    <span class="expand-hint">⤢ EXPAND</span>
     <div class="plbl">Est. Personnel On-Site <span class="src">MODEL</span></div>
     <div class="bnum" id="pax-num">1,247</div>
     <div class="unit">WORKERS / ACTIVE SHIFT</div>
     <div class="msub">Janet 737 cap: <span>~110/flt</span> &nbsp;|&nbsp; Lots: <span id="lot-pct">75%</span> full</div>
     <div class="msub" style="margin-top:4px">Deviation from baseline: <span id="dev">+16%</span></div>
   </div>
-  <div class="panel" style="animation-delay:.15s">
+  <div class="panel" style="animation-delay:.15s" onclick="expandPanel(this)">
+    <span class="expand-hint">⤢ EXPAND</span>
     <div class="plbl">Janet Flights Today <span class="src">ADS-B EST.</span></div>
     <div class="bnum a" id="flight-count">--</div>
     <div class="unit">OF ~22 WEEKDAY EST.</div>
     <div class="msub">To Groom: <span id="to-groom">--</span> &nbsp;|&nbsp; To TTR: <span id="to-ttr">--</span></div>
     <div class="msub" style="margin-top:4px">Last Janet seen: <span id="last-janet">checking ADS-B...</span></div>
   </div>
-  <div class="panel" style="animation-delay:.2s">
+  <div class="panel" style="animation-delay:.2s" onclick="expandPanel(this)">
+    <span class="expand-hint">⤢ EXPAND</span>
     <div class="plbl">Threat / Activity Level <span class="src">COMPOSITE</span></div>
     <div class="threat-wrap">
       <div class="threat-num" id="threat-num" style="color:var(--a)">3</div>
@@ -274,13 +326,15 @@ h1 span{color:var(--a);text-shadow:0 0 18px var(--a)}
 
 <!-- WEATHER + QUAKES -->
 <div class="g21" style="animation-delay:.25s">
-  <div class="panel">
+  <div class="panel" onclick="expandPanel(this)">
+    <span class="expand-hint">⤢ EXPAND</span>
     <div class="plbl">Live Seismic — 150km Radius <span class="src">USGS LIVE</span></div>
     <div class="qhdr"><div>MAG</div><div>DIST</div><div>LOCATION</div><div>TIME</div></div>
     <div class="qlist" id="quake-list"><div class="loading">⬡ fetching usgs feed...</div></div>
     <div class="msub" style="margin-top:8px">Total events (30d): <span id="quake-count">--</span> &nbsp;|&nbsp; Max mag: <span id="quake-max">--</span></div>
   </div>
-  <div class="panel">
+  <div class="panel" onclick="expandPanel(this)">
+    <span class="expand-hint">⤢ EXPAND</span>
     <div class="plbl">Groom Lake Weather <span class="src">OPEN-METEO LIVE</span></div>
     <div class="wx-grid" id="wx-grid">
       <div class="wx-item"><div class="wx-lbl">TEMPERATURE</div><div class="wx-val loading">--</div><div class="wx-unit">°F</div></div>
@@ -299,7 +353,8 @@ h1 span{color:var(--a);text-shadow:0 0 18px var(--a)}
 
 <!-- RADAR + FLIGHT LOG -->
 <div class="g12" style="animation-delay:.3s">
-  <div class="panel">
+  <div class="panel" onclick="expandPanel(this)">
+    <span class="expand-hint">⤢ EXPAND</span>
     <div class="plbl">Approach Scope — KXTA Area <span class="src">SIMULATED</span></div>
     <div class="radar-wrap">
       <div class="rc"></div><div class="rc"></div><div class="rc"></div><div class="rc"></div>
@@ -320,7 +375,8 @@ h1 span{color:var(--a);text-shadow:0 0 18px var(--a)}
     </div>
   </div>
 
-  <div class="panel">
+  <div class="panel" onclick="expandPanel(this)">
+    <span class="expand-hint">⤢ EXPAND</span>
     <div class="plbl">Janet Fleet Activity <span class="src" id="adsb-src">OPENSKY LIVE</span></div>
     <div class="ftbl-hdr"><div>CALLSIGN</div><div>ROUTE</div><div>AIRCRAFT</div><div>STATUS</div><div>ALT/GS</div></div>
     <div id="flight-table">
@@ -334,11 +390,13 @@ h1 span{color:var(--a);text-shadow:0 0 18px var(--a)}
 
 <!-- NOTAMS + PERSONNEL -->
 <div class="g2" style="animation-delay:.35s">
-  <div class="panel">
+  <div class="panel" onclick="expandPanel(this)">
+    <span class="expand-hint">⤢ EXPAND</span>
     <div class="plbl">FAA NOTAMs — Nevada Airspace <span class="src">FAA LIVE</span></div>
     <div class="nlist" id="notam-list"><div class="loading">⬡ fetching faa notam feed...</div></div>
   </div>
-  <div class="panel">
+  <div class="panel" onclick="expandPanel(this)">
+    <span class="expand-hint">⤢ EXPAND</span>
     <div class="plbl">Personnel Breakdown Estimate <span class="src">MODEL</span></div>
     <div style="margin-top:4px">
       <div class="brow"><div class="blbl">Defense Contractors</div><div class="btrk"><div class="bfill" id="bar1" style="width:0%"></div></div><div class="bval" id="bv1">~686</div></div>
@@ -357,7 +415,8 @@ h1 span{color:var(--a);text-shadow:0 0 18px var(--a)}
 </div>
 
 <!-- SATELLITE TIMELINE -->
-<div class="panel" style="animation-delay:.4s;margin-bottom:13px">
+<div class="panel" style="animation-delay:.4s;margin-bottom:13px" onclick="expandPanel(this)">
+  <span class="expand-hint">⤢ EXPAND</span>
   <div class="plbl">Groom Lake Satellite Timeline — Facility Evolution <span class="src">OPEN SOURCE IMAGERY</span></div>
   <div class="g2" style="margin-bottom:0">
     <div class="sat-wrap">
@@ -924,6 +983,49 @@ const apiStatus={weather:false,quakes:false,notam:false,adsb:false};
   setInterval(loadNOTAMs,600000);    // 10min
   setInterval(updateThreat,60000);   // 1min
 })();
+
+// ─── PANEL EXPAND MODAL ──────────────────────────────────
+function expandPanel(panel){
+  // Don't expand if user clicked a button/link inside the panel
+  if(event.target.closest('button,a,.sat-btn,.sat-dot,.stl-item,.abtn'))return;
+
+  const titleEl=panel.querySelector('.plbl');
+  const title=titleEl ? titleEl.textContent.replace(/⤢.*$/,'').trim() : 'PANEL DATA';
+
+  // Clone the panel contents (excluding the expand hint)
+  const clone=panel.cloneNode(true);
+  clone.querySelector('.expand-hint')?.remove();
+  // Remove onclick so nested panels don't re-trigger
+  clone.removeAttribute('onclick');
+  clone.style.cssText='border:none;background:none;padding:0;animation:none;cursor:default';
+
+  // Remove scroll limits inside modal so all content is visible
+  clone.querySelectorAll('.qlist,.nlist,.flight-log,.intel-feed').forEach(el=>{
+    el.style.maxHeight='none';
+    el.style.overflow='visible';
+  });
+
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-content').innerHTML='';
+  document.getElementById('modal-content').appendChild(clone);
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeModal(){
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+// Close on overlay click (outside the box)
+document.getElementById('modal-overlay').addEventListener('click',function(e){
+  if(e.target===this)closeModal();
+});
+
+// Close on Escape key
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape')closeModal();
+});
 </script>
 </body>
 </html>
