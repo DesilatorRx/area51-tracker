@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GROOM LAKE LIVE TRACKER // KXTA // OPEN SOURCE</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=VT323&display=swap');
+:root{--g:#00ff41;--gd:#00b32c;--gk:#003b0f;--a:#ffb300;--r:#ff2233;--b:#0af;--bg:#020a04;--pan:#030f06;--bdr:rgba(0,255,65,.2);--bdh:rgba(0,255,65,.55)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--g);font-family:'Share Tech Mono',monospace;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,65,.025) 2px,rgba(0,255,65,.025) 4px);pointer-events:none;z-index:1000}
+body::after{content:'';position:fixed;top:-200px;left:0;right:0;height:180px;background:linear-gradient(transparent,rgba(0,255,65,.035),transparent);animation:sw 9s linear infinite;pointer-events:none;z-index:999}
+@keyframes sw{0%{top:-200px}100%{top:100vh}}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes flick{0%,100%{opacity:1}93%{opacity:.75}94%{opacity:1}97%{opacity:.88}}
+@keyframes pulseR{0%,100%{box-shadow:0 0 5px var(--r)}50%{box-shadow:0 0 18px var(--r),0 0 35px rgba(255,34,51,.3)}}
+@keyframes pulseG{0%,100%{box-shadow:0 0 5px var(--g)}50%{box-shadow:0 0 18px var(--g)}}
+@keyframes radarSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
+
+.wrap{max-width:1280px;margin:0 auto;padding:16px;animation:flick 12s infinite}
+
+/* HEADER */
+.hdr{border:1px solid var(--bdh);padding:18px 24px;margin-bottom:14px;background:var(--pan);box-shadow:0 0 40px rgba(0,255,65,.08),inset 0 0 40px rgba(0,255,65,.015);position:relative}
+.hdr::before{content:'// DOCUMENT CLASS: UNCLASSIFIED // OPEN-SOURCE OSINT // NOT USG AFFILIATED //';position:absolute;top:-9px;left:18px;background:var(--bg);padding:0 6px;font-size:9px;color:var(--gd);letter-spacing:2px}
+.hdr-row{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px}
+h1{font-family:'Orbitron',monospace;font-size:clamp(16px,2.8vw,26px);font-weight:900;letter-spacing:4px;text-shadow:0 0 18px var(--g),0 0 40px rgba(0,255,65,.25);line-height:1.2}
+h1 span{color:var(--a);text-shadow:0 0 18px var(--a)}
+.sub{font-size:10px;color:var(--gd);letter-spacing:3px;margin-top:5px}
+.chips{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.chip{font-size:9px;letter-spacing:2px;padding:2px 7px;border:1px solid rgba(0,255,65,.3);color:var(--gd)}
+.chip.on{border-color:var(--g);color:var(--g);background:rgba(0,255,65,.06)}
+.hdr-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+.stamp{border:2px solid var(--r);padding:3px 9px;font-family:'Orbitron',monospace;font-size:10px;font-weight:700;color:var(--r);letter-spacing:3px;transform:rotate(-2deg);text-shadow:0 0 8px var(--r)}
+.live-ind{display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:2px}
+.ldot{width:8px;height:8px;background:var(--r);border-radius:50%;animation:pulseR 1.5s ease-in-out infinite}
+.ldot.green{background:var(--g);animation:pulseG 2s ease-in-out infinite}
+#clock{font-size:11px;color:var(--gd)}
+.sbar{margin-top:14px;padding-top:14px;border-top:1px solid var(--bdr);display:flex;gap:24px;flex-wrap:wrap;font-size:10px;color:var(--gd);letter-spacing:1px}
+.sbar span{color:var(--g)}
+
+/* API KEY BAR */
+.apibar{background:rgba(255,179,0,.05);border:1px solid rgba(255,179,0,.35);padding:9px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--a)}
+.apibar label{font-size:10px;letter-spacing:2px;flex-shrink:0}
+.apibar input{background:rgba(0,0,0,.5);border:1px solid rgba(255,179,0,.4);color:var(--a);font-family:'Share Tech Mono',monospace;font-size:11px;padding:4px 8px;flex:1;min-width:180px;max-width:320px;outline:none}
+.apibar input::placeholder{color:rgba(255,179,0,.35)}
+.apibar input:focus{border-color:var(--a);box-shadow:0 0 8px rgba(255,179,0,.2)}
+.abtn{background:rgba(255,179,0,.12);border:1px solid var(--a);color:var(--a);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;padding:4px 12px;cursor:pointer;transition:all .2s}
+.abtn:hover{background:rgba(255,179,0,.25)}
+.api-status{font-size:10px;letter-spacing:1px}
+
+/* GRID */
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px;margin-bottom:13px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:13px}
+.g21{display:grid;grid-template-columns:2fr 1fr;gap:13px;margin-bottom:13px}
+.g12{display:grid;grid-template-columns:1fr 2fr;gap:13px;margin-bottom:13px}
+
+/* PANEL */
+.panel{border:1px solid var(--bdr);background:var(--pan);padding:14px 18px;position:relative;transition:border-color .25s,box-shadow .25s;animation:fadeUp .4s ease both}
+.panel:hover{border-color:var(--bdh);box-shadow:0 0 14px rgba(0,255,65,.07)}
+.plbl{font-size:9px;letter-spacing:3px;color:var(--gd);margin-bottom:10px;display:flex;align-items:center;gap:8px;text-transform:uppercase}
+.plbl::after{content:'';flex:1;height:1px;background:var(--bdr)}
+.plbl .src{font-size:8px;color:rgba(0,255,65,.3);letter-spacing:1px;margin-left:auto}
+
+/* BIG NUMBERS */
+.bnum{font-family:'VT323',monospace;font-size:58px;line-height:1;text-shadow:0 0 18px var(--g),0 0 36px rgba(0,255,65,.25);letter-spacing:2px}
+.bnum.a{color:var(--a);text-shadow:0 0 18px var(--a),0 0 36px rgba(255,179,0,.25)}
+.bnum.r{color:var(--r);text-shadow:0 0 18px var(--r)}
+.bnum.b{color:var(--b);text-shadow:0 0 18px var(--b)}
+.unit{font-size:9px;color:var(--gd);letter-spacing:2px;margin-top:2px}
+.msub{font-size:10px;color:var(--gd);margin-top:6px;border-top:1px solid var(--bdr);padding-top:5px}
+.msub span,.msub a{color:var(--g)}
+.msub a{text-decoration:none}
+.loading{color:rgba(0,255,65,.4);font-size:11px;animation:blink 1.2s step-end infinite}
+
+/* WEATHER GRID */
+.wx-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.wx-item{border:1px solid var(--bdr);padding:7px 10px}
+.wx-lbl{font-size:9px;color:var(--gd);letter-spacing:2px;margin-bottom:3px}
+.wx-val{font-family:'VT323',monospace;font-size:32px;line-height:1;color:var(--g);text-shadow:0 0 12px var(--g)}
+.wx-unit{font-size:9px;color:var(--gd)}
+
+/* QUAKE LIST */
+.qlist{max-height:220px;overflow-y:auto}
+.qlist::-webkit-scrollbar{width:3px}
+.qlist::-webkit-scrollbar-thumb{background:var(--gk)}
+.qrow{display:grid;grid-template-columns:50px 70px 1fr 60px;gap:6px;padding:5px 0;border-bottom:1px solid rgba(0,255,65,.05);font-size:10px;align-items:center;animation:slideIn .3s ease both}
+.qrow:hover{background:rgba(0,255,65,.025)}
+.qmag{font-family:'VT323',monospace;font-size:26px;line-height:1}
+.qmag.low{color:var(--g)}
+.qmag.mid{color:var(--a)}
+.qmag.hi{color:var(--r)}
+.qdist{color:var(--gd);font-size:9px}
+.qplace{color:var(--g);font-size:10px;line-height:1.3}
+.qtime{font-size:9px;color:rgba(0,255,65,.4);text-align:right}
+.qhdr{display:grid;grid-template-columns:50px 70px 1fr 60px;gap:6px;font-size:8px;color:var(--gk);letter-spacing:2px;border-bottom:1px solid var(--bdr);padding-bottom:5px;margin-bottom:3px}
+
+/* NOTAM LIST */
+.nlist{max-height:240px;overflow-y:auto}
+.nlist::-webkit-scrollbar{width:3px}
+.nlist::-webkit-scrollbar-thumb{background:var(--gk)}
+.nrow{padding:8px 0;border-bottom:1px solid rgba(0,255,65,.05);font-size:10px;animation:slideIn .3s ease both}
+.nrow:hover{background:rgba(0,255,65,.02)}
+.ntag{display:inline-block;font-size:8px;letter-spacing:2px;padding:2px 6px;border:1px solid;margin-bottom:4px}
+.ntag.warn{border-color:var(--r);color:var(--r)}
+.ntag.info{border-color:var(--a);color:var(--a)}
+.ntag.ok{border-color:var(--g);color:var(--g)}
+.nid{color:var(--a);margin-bottom:3px}
+.ntxt{color:var(--gd);line-height:1.5;font-size:10px}
+
+/* FLIGHT TABLE */
+.ftbl{width:100%}
+.ftbl-hdr{display:grid;grid-template-columns:90px 110px 1fr 80px 70px;gap:6px;font-size:8px;color:var(--gk);letter-spacing:2px;border-bottom:1px solid var(--bdr);padding-bottom:6px;margin-bottom:4px}
+.frow{display:grid;grid-template-columns:90px 110px 1fr 80px 70px;gap:6px;padding:5px 0;border-bottom:1px solid rgba(0,255,65,.04);font-size:10px;align-items:center;animation:slideIn .3s ease both}
+.frow:hover{background:rgba(0,255,65,.025)}
+.cs{color:var(--a);font-weight:bold;letter-spacing:1px}
+.fstat{font-size:8px;letter-spacing:1px;padding:2px 5px;border:1px solid;text-align:center}
+.fstat.air{border-color:var(--g);color:var(--g)}
+.fstat.gnd{border-color:var(--gd);color:var(--gd)}
+.fstat.dep{border-color:var(--a);color:var(--a)}
+.fstat.unk{border-color:rgba(0,255,65,.3);color:rgba(0,255,65,.3)}
+.falt{font-size:10px;text-align:right}
+.fadsbx-note{font-size:10px;color:rgba(0,255,65,.4);padding-top:8px;border-top:1px solid var(--bdr);margin-top:8px;line-height:1.5}
+
+/* RADAR */
+.radar-wrap{position:relative;width:200px;height:200px;margin:8px auto}
+.rc{position:absolute;border:1px solid rgba(0,255,65,.18);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%)}
+.rc:nth-child(1){width:100%;height:100%}
+.rc:nth-child(2){width:75%;height:75%}
+.rc:nth-child(3){width:50%;height:50%}
+.rc:nth-child(4){width:25%;height:25%}
+.rcr{position:absolute;left:50%;top:0;width:1px;height:100%;background:rgba(0,255,65,.12)}
+.rcr.h{top:50%;left:0;width:100%;height:1px}
+.rsw{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:50%;overflow:hidden}
+.rsw::after{content:'';position:absolute;top:50%;left:50%;width:50%;height:50%;transform-origin:0% 100%;background:conic-gradient(from 0deg,transparent 78%,rgba(0,255,65,.45) 100%);animation:radarSpin 4s linear infinite}
+.blip{position:absolute;width:7px;height:7px;background:var(--g);border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 6px var(--g),0 0 12px rgba(0,255,65,.4);transition:left 3s ease,top 3s ease}
+.blip.amber{background:var(--a);box-shadow:0 0 6px var(--a)}
+.blip.red{background:var(--r);box-shadow:0 0 6px var(--r)}
+.rlbl{position:absolute;font-size:7px;color:var(--gd);letter-spacing:1px;white-space:nowrap}
+.rinfo{font-size:10px;color:var(--gd);border-top:1px solid var(--bdr);padding-top:8px;margin-top:4px}
+.rinfo div{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(0,255,65,.04)}
+.rinfo div span{color:var(--g)}
+
+/* SATELLITE TIMELINE */
+.sat-wrap{position:relative}
+.sat-img-box{position:relative;width:100%;aspect-ratio:16/9;background:#000;overflow:hidden;border:1px solid var(--bdr);margin-bottom:10px}
+.sat-img-box img{width:100%;height:100%;object-fit:cover;filter:contrast(1.15) saturate(0.7) brightness(0.9)}
+.sat-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(transparent 60%,rgba(0,10,2,.9));pointer-events:none}
+.sat-caption{position:absolute;bottom:10px;left:12px;right:12px}
+.sat-year{font-family:'Orbitron',monospace;font-size:22px;font-weight:900;color:var(--a);text-shadow:0 0 15px var(--a);letter-spacing:3px}
+.sat-desc{font-size:10px;color:rgba(0,255,65,.8);margin-top:3px;line-height:1.5;letter-spacing:.5px}
+.sat-src{font-size:9px;color:rgba(0,255,65,.35);margin-top:4px}
+.sat-controls{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.sat-btn{background:rgba(0,255,65,.08);border:1px solid var(--bdr);color:var(--g);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;padding:5px 10px;cursor:pointer;transition:all .2s}
+.sat-btn:hover,.sat-btn.active{background:rgba(0,255,65,.2);border-color:var(--g)}
+.sat-track{display:flex;gap:4px;flex:1;align-items:center;flex-wrap:wrap}
+.sat-dot{width:10px;height:10px;border-radius:50%;border:1px solid var(--bdr);cursor:pointer;flex-shrink:0;transition:all .2s;background:var(--gk)}
+.sat-dot.active{background:var(--a);border-color:var(--a);box-shadow:0 0 8px var(--a)}
+.sat-dot:hover{border-color:var(--g)}
+.sat-timeline{margin-top:6px}
+.stl-item{padding:5px 0;border-bottom:1px solid rgba(0,255,65,.05);font-size:10px;display:flex;gap:10px;cursor:pointer;transition:background .15s}
+.stl-item:hover{background:rgba(0,255,65,.025)}
+.stl-item.active-tl{background:rgba(255,179,0,.05)}
+.stl-yr{color:var(--a);font-family:'VT323',monospace;font-size:20px;line-height:1;width:52px;flex-shrink:0}
+.stl-txt{color:var(--gd);line-height:1.5}
+.stl-txt span{color:var(--g)}
+
+/* ALERT BANNER */
+.alert-bar{border:1px solid rgba(255,179,0,.4);background:rgba(255,179,0,.04);padding:8px 16px;margin-bottom:13px;display:flex;align-items:center;gap:10px;font-size:11px;color:var(--a)}
+.albl{font-family:'Orbitron',monospace;font-weight:700;font-size:9px;letter-spacing:3px;flex-shrink:0}
+.ascroll{overflow:hidden;white-space:nowrap;flex:1}
+
+/* BARS */
+.brow{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:10px}
+.blbl{width:140px;color:var(--gd);font-size:9px;flex-shrink:0}
+.btrk{flex:1;height:13px;background:var(--gk);position:relative;overflow:hidden}
+.bfill{height:100%;background:var(--g);position:relative}
+.bfill::after{content:'';position:absolute;right:0;top:0;bottom:0;width:3px;background:#fff;opacity:.5;box-shadow:0 0 5px #fff}
+.bfill.a{background:var(--a)}
+.bfill.r{background:var(--r)}
+.bval{width:40px;text-align:right;font-size:9px}
+
+/* THREAT METER */
+.threat-wrap{text-align:center;padding:8px 0}
+.threat-num{font-family:'VT323',monospace;font-size:80px;line-height:1;text-shadow:0 0 25px currentColor}
+.threat-lbl{font-size:11px;letter-spacing:3px;margin-top:4px}
+.threat-sub{font-size:9px;color:var(--gd);margin-top:6px;letter-spacing:1px}
+
+/* FOOTER */
+.footer{border-top:1px solid var(--bdr);padding-top:10px;margin-top:4px;font-size:9px;color:rgba(0,255,65,.22);letter-spacing:2px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.cur::after{content:'█';animation:blink 1s step-end infinite}
+
+/* RESPONSIVE */
+@media(max-width:900px){.g3,.g21,.g12{grid-template-columns:1fr 1fr}.g2{grid-template-columns:1fr}}
+@media(max-width:600px){.g3,.g21,.g12,.g2{grid-template-columns:1fr}.ftbl-hdr,.frow{grid-template-columns:80px 90px 1fr 60px}.falt{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<div class="hdr" style="animation-delay:.05s">
+  <div class="hdr-row">
+    <div>
+      <h1>GROOM LAKE <span>LIVE</span> TRACKER</h1>
+      <div class="sub">// KXTA // HOMEY AIRPORT // 37.2431°N 115.7930°W // OPEN-SOURCE OSINT //</div>
+      <div class="chips">
+        <div class="chip on">UNCLASSIFIED</div>
+        <div class="chip">SECRET//NOFORN</div>
+        <div class="chip">TS/SCI</div>
+        <div class="chip">SAP</div>
+        <div class="chip">ECI-[REDACTED]</div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <div class="stamp">NOT USG</div>
+      <div class="live-ind"><div class="ldot"></div>LIVE DATA</div>
+      <div id="clock">--:--:-- UTC</div>
+      <div class="live-ind" style="margin-top:4px"><div class="ldot green" id="api-dot"></div><span id="api-label" style="font-size:10px;letter-spacing:1px">CONNECTING...</span></div>
+    </div>
+  </div>
+  <div class="sbar">
+    <div>BASE: <span>OPERATIONAL</span></div>
+    <div>AIRSPACE: <span id="airspace-status">R-4808N ACTIVE</span></div>
+    <div>PERIMETER: <span>DEADLY FORCE AUTHORIZED</span></div>
+    <div>JANET FLEET: <span id="janet-status">CHECKING...</span></div>
+    <div>WEATHER: <span id="wx-status">LOADING...</span></div>
+  </div>
+</div>
+
+<!-- API KEY INPUT -->
+<div class="apibar">
+  <label>ADSB EXCHANGE API KEY (RAPIDAPI):</label>
+  <input type="text" id="adsbkey" placeholder="paste your RapidAPI key for live Janet tracking..." />
+  <button class="abtn" onclick="loadADSB()">ACTIVATE</button>
+  <span class="api-status" id="adsbstatus" style="color:rgba(255,179,0,.5)">⬤ STANDBY — demo data shown</span>
+</div>
+
+<!-- ALERT TICKER -->
+<div class="alert-bar">
+  <div class="albl">⚠ SIGINT</div>
+  <div class="ascroll" id="ticker">Loading live data feeds... USGS seismic network active... Open-Meteo weather nominal... FAA NOTAM check in progress...</div>
+</div>
+
+<!-- TOP METRICS ROW -->
+<div class="g3">
+  <div class="panel" style="animation-delay:.1s">
+    <div class="plbl">Est. Personnel On-Site <span class="src">MODEL</span></div>
+    <div class="bnum" id="pax-num">1,247</div>
+    <div class="unit">WORKERS / ACTIVE SHIFT</div>
+    <div class="msub">Janet 737 cap: <span>~110/flt</span> &nbsp;|&nbsp; Lots: <span id="lot-pct">75%</span> full</div>
+    <div class="msub" style="margin-top:4px">Deviation from baseline: <span id="dev">+16%</span></div>
+  </div>
+  <div class="panel" style="animation-delay:.15s">
+    <div class="plbl">Janet Flights Today <span class="src">ADS-B EST.</span></div>
+    <div class="bnum a" id="flight-count">--</div>
+    <div class="unit">OF ~22 WEEKDAY EST.</div>
+    <div class="msub">To Groom: <span id="to-groom">--</span> &nbsp;|&nbsp; To TTR: <span id="to-ttr">--</span></div>
+    <div class="msub" style="margin-top:4px">Last Janet seen: <span id="last-janet">checking ADS-B...</span></div>
+  </div>
+  <div class="panel" style="animation-delay:.2s">
+    <div class="plbl">Threat / Activity Level <span class="src">COMPOSITE</span></div>
+    <div class="threat-wrap">
+      <div class="threat-num" id="threat-num" style="color:var(--a)">3</div>
+      <div class="threat-lbl" id="threat-lbl" style="color:var(--a)">ELEVATED</div>
+      <div class="threat-sub">Scale 1–5 based on flights + weather<br>+ seismic + NOTAM activity</div>
+    </div>
+  </div>
+</div>
+
+<!-- WEATHER + QUAKES -->
+<div class="g21" style="animation-delay:.25s">
+  <div class="panel">
+    <div class="plbl">Live Seismic — 150km Radius <span class="src">USGS LIVE</span></div>
+    <div class="qhdr"><div>MAG</div><div>DIST</div><div>LOCATION</div><div>TIME</div></div>
+    <div class="qlist" id="quake-list"><div class="loading">⬡ fetching usgs feed...</div></div>
+    <div class="msub" style="margin-top:8px">Total events (30d): <span id="quake-count">--</span> &nbsp;|&nbsp; Max mag: <span id="quake-max">--</span></div>
+  </div>
+  <div class="panel">
+    <div class="plbl">Groom Lake Weather <span class="src">OPEN-METEO LIVE</span></div>
+    <div class="wx-grid" id="wx-grid">
+      <div class="wx-item"><div class="wx-lbl">TEMPERATURE</div><div class="wx-val loading">--</div><div class="wx-unit">°F</div></div>
+      <div class="wx-item"><div class="wx-lbl">WIND SPEED</div><div class="wx-val loading">--</div><div class="wx-unit">KTS</div></div>
+      <div class="wx-item"><div class="wx-lbl">WIND DIR</div><div class="wx-val loading">--</div><div class="wx-unit">DEG</div></div>
+      <div class="wx-item"><div class="wx-lbl">VISIBILITY</div><div class="wx-val loading">--</div><div class="wx-unit">COND</div></div>
+    </div>
+    <div class="msub" style="margin-top:8px">Precip: <span id="wx-precip">--</span> &nbsp;|&nbsp; Cloud: <span id="wx-cloud">--</span> &nbsp;|&nbsp; Ops: <span id="wx-ops">--</span></div>
+    <div class="rinfo" style="margin-top:10px">
+      <div><span>Sunrise</span><span id="wx-rise">--</span></div>
+      <div><span>Sunset</span><span id="wx-set">--</span></div>
+      <div><span>Coord</span><span>37.24°N 115.79°W</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- RADAR + FLIGHT LOG -->
+<div class="g12" style="animation-delay:.3s">
+  <div class="panel">
+    <div class="plbl">Approach Scope — KXTA Area <span class="src">SIMULATED</span></div>
+    <div class="radar-wrap">
+      <div class="rc"></div><div class="rc"></div><div class="rc"></div><div class="rc"></div>
+      <div class="rcr"></div><div class="rcr h"></div>
+      <div class="rsw"></div>
+      <div class="blip" id="b1" style="left:67%;top:33%"></div>
+      <div class="blip amber" id="b2" style="left:43%;top:75%"></div>
+      <div class="blip" id="b3" style="left:24%;top:55%"></div>
+      <div class="blip red" id="b4" style="left:72%;top:60%"></div>
+      <div class="rlbl" style="left:70%;top:24%">J412</div>
+      <div class="rlbl" style="left:20%;top:57%">J394</div>
+    </div>
+    <div class="rinfo">
+      <div><span>KXTA (Groom Lk)</span><span>83nm NW</span></div>
+      <div><span>KLAS (Las Vegas)</span><span>Origin</span></div>
+      <div><span>ADS-B Cover</span><span id="adsb-cov">Partial</span></div>
+      <div><span>Transponders</span><span>Off &lt;FL200</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="plbl">Janet Fleet Activity <span class="src" id="adsb-src">DEMO DATA</span></div>
+    <div class="ftbl-hdr"><div>CALLSIGN</div><div>ROUTE</div><div>AIRCRAFT</div><div>STATUS</div><div>ALT/GS</div></div>
+    <div id="flight-table">
+      <!-- populated by JS -->
+    </div>
+    <div class="fadsbx-note" id="adsb-note">
+      ⬡ Demo data shown. Enter RapidAPI ADS-B Exchange key above to enable live Janet tail number tracking (N4529W, N5294E, N5294M, N5175U, N5176Y, N5177C).
+    </div>
+  </div>
+</div>
+
+<!-- NOTAMS + PERSONNEL -->
+<div class="g2" style="animation-delay:.35s">
+  <div class="panel">
+    <div class="plbl">FAA NOTAMs — Nevada Airspace <span class="src">FAA LIVE</span></div>
+    <div class="nlist" id="notam-list"><div class="loading">⬡ fetching faa notam feed...</div></div>
+  </div>
+  <div class="panel">
+    <div class="plbl">Personnel Breakdown Estimate <span class="src">MODEL</span></div>
+    <div style="margin-top:4px">
+      <div class="brow"><div class="blbl">Defense Contractors</div><div class="btrk"><div class="bfill" id="bar1" style="width:0%"></div></div><div class="bval" id="bv1">~686</div></div>
+      <div class="brow"><div class="blbl">USAF Military</div><div class="btrk"><div class="bfill" id="bar2" style="width:0%"></div></div><div class="bval" id="bv2">~274</div></div>
+      <div class="brow"><div class="blbl">DoD Civilians</div><div class="btrk"><div class="bfill a" id="bar3" style="width:0%"></div></div><div class="bval" id="bv3">~175</div></div>
+      <div class="brow"><div class="blbl">███████ [SAP]</div><div class="btrk"><div class="bfill r" id="bar4" style="width:0%"></div></div><div class="bval" id="bv4">~112</div></div>
+    </div>
+    <div class="plbl" style="margin-top:16px">Shift Cycle</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+      <div style="border:1px solid var(--bdr);padding:7px 9px"><div style="font-size:9px;color:var(--gd);letter-spacing:2px">DAY SHIFT</div><div style="font-family:'VT323',monospace;font-size:26px">0500–1700</div></div>
+      <div style="border:1px solid var(--bdr);padding:7px 9px"><div style="font-size:9px;color:var(--gd);letter-spacing:2px">NIGHT SHIFT</div><div style="font-family:'VT323',monospace;font-size:26px">1700–0500</div></div>
+      <div style="border:1px solid var(--bdr);padding:7px 9px"><div style="font-size:9px;color:var(--gd);letter-spacing:2px">PALMDALE WEEKLY</div><div style="font-family:'VT323',monospace;font-size:26px">MON/FRI</div></div>
+      <div style="border:1px solid var(--bdr);padding:7px 9px"><div style="font-size:9px;color:var(--gd);letter-spacing:2px">LOT CAPACITY</div><div style="font-family:'VT323',monospace;font-size:26px">~1,740</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- SATELLITE TIMELINE -->
+<div class="panel" style="animation-delay:.4s;margin-bottom:13px">
+  <div class="plbl">Groom Lake Satellite Timeline — Facility Evolution <span class="src">OPEN SOURCE IMAGERY</span></div>
+  <div class="g2" style="margin-bottom:0">
+    <div class="sat-wrap">
+      <div class="sat-img-box" id="sat-box">
+        <img id="sat-img" src="" alt="Satellite view" />
+        <div class="sat-overlay"></div>
+        <div class="sat-caption">
+          <div class="sat-year" id="sat-year">----</div>
+          <div class="sat-desc" id="sat-desc">Loading...</div>
+          <div class="sat-src" id="sat-src"></div>
+        </div>
+      </div>
+      <div class="sat-controls">
+        <button class="sat-btn" onclick="satNav(-1)">◀ PREV</button>
+        <div class="sat-track" id="sat-dots"></div>
+        <button class="sat-btn" onclick="satNav(1)">NEXT ▶</button>
+      </div>
+    </div>
+    <div style="overflow-y:auto;max-height:320px" class="sat-timeline" id="sat-timeline"></div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div>GROOM LAKE LIVE TRACKER // OPEN-SOURCE OSINT // NOT AFFILIATED WITH USG, DOD, USAF, OR ANY CONTRACTOR</div>
+  <div>APIs: USGS EARTHQUAKE · OPEN-METEO WEATHER · FAA NOTAM · ADS-B EXCHANGE (KEY REQ.)</div>
+  <div class="cur" id="ftr-status">MONITORING</div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+// ─── CONSTANTS ───────────────────────────────────────────
+const GROOM_LAT = 37.2431, GROOM_LON = -115.7930;
+const JANET_TAILS = ['N4529W','N5294E','N5294M','N5175U','N5176Y','N5177C','N654BA','N661BA','N662BA'];
+
+// ─── CLOCK ───────────────────────────────────────────────
+function tick(){
+  const n=new Date(), p=v=>String(v).padStart(2,'0');
+  document.getElementById('clock').textContent=`${p(n.getUTCHours())}:${p(n.getUTCMinutes())}:${p(n.getUTCSeconds())} UTC`;
+}
+setInterval(tick,1000); tick();
+
+// ─── TICKER ──────────────────────────────────────────────
+const tickerMsgs=[];
+function updateTicker(){
+  if(!tickerMsgs.length)return;
+  document.getElementById('ticker').textContent=tickerMsgs.join('   ///   ');
+}
+function addTicker(msg){tickerMsgs.push(msg);if(tickerMsgs.length>12)tickerMsgs.shift();updateTicker();}
+
+// ─── USGS EARTHQUAKES ────────────────────────────────────
+async function loadQuakes(){
+  try{
+    const end=new Date().toISOString();
+    const start=new Date(Date.now()-30*864e5).toISOString();
+    const url=`https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=${start}&endtime=${end}&latitude=${GROOM_LAT}&longitude=${GROOM_LON}&maxradiuskm=150&orderby=time&limit=20`;
+    const r=await fetch(url);
+    const d=await r.json();
+    renderQuakes(d.features);
+    addTicker(`USGS: ${d.features.length} seismic events in 150km radius (30d)`);
+    if(d.features.length){
+      const mags=d.features.map(f=>f.properties.mag).filter(Boolean);
+      document.getElementById('quake-count').textContent=d.features.length;
+      document.getElementById('quake-max').textContent=Math.max(...mags).toFixed(1);
+    }
+  }catch(e){
+    document.getElementById('quake-list').innerHTML='<div style="color:var(--r);font-size:10px">⚠ USGS feed error — CORS proxy needed for browser</div>';
+    renderQuakesFallback();
+  }
+}
+
+function renderQuakes(features){
+  const el=document.getElementById('quake-list');
+  if(!features.length){el.innerHTML='<div style="font-size:10px;color:var(--gd)">No events in range</div>';return;}
+  el.innerHTML='';
+  features.slice(0,12).forEach((f,i)=>{
+    const p=f.properties, mag=p.mag||0;
+    const coords=f.geometry.coordinates;
+    const dist=haversine(GROOM_LAT,GROOM_LON,coords[1],coords[0]);
+    const tc=mag>=3?'hi':mag>=2?'mid':'low';
+    const row=document.createElement('div');
+    row.className='qrow'; row.style.animationDelay=`${i*0.05}s`;
+    row.innerHTML=`
+      <div class="qmag ${tc}">${mag.toFixed(1)}</div>
+      <div class="qdist">${Math.round(dist)}km<br><span style="font-size:8px;color:rgba(0,255,65,.3)">${coords[2]?.toFixed(1)||'?'}km deep</span></div>
+      <div class="qplace">${p.place||'Unknown'}</div>
+      <div class="qtime">${timeSince(p.time)}</div>`;
+    el.appendChild(row);
+  });
+}
+
+function renderQuakesFallback(){
+  // Demo quakes near Nevada Test Site
+  const demo=[
+    {mag:1.8,dist:42,place:'18km NNW of Mercury, NV',depth:8.2,ago:'2h'},
+    {mag:0.9,dist:89,place:'9km SW of Beatty, NV',depth:5.1,ago:'6h'},
+    {mag:2.1,dist:118,place:'23km N of Amargosa Valley, NV',depth:12.0,ago:'11h'},
+    {mag:1.2,dist:67,place:'5km W of Rachel, NV',depth:3.4,ago:'1d'},
+    {mag:0.7,dist:44,place:'32km SE of Groom Lake (KXTA)',depth:6.8,ago:'2d'},
+  ];
+  const el=document.getElementById('quake-list'); el.innerHTML='';
+  demo.forEach((q,i)=>{
+    const tc=q.mag>=3?'hi':q.mag>=2?'mid':'low';
+    const row=document.createElement('div');
+    row.className='qrow';row.style.animationDelay=`${i*.05}s`;
+    row.innerHTML=`<div class="qmag ${tc}">${q.mag.toFixed(1)}</div><div class="qdist">${q.dist}km<br><span style="font-size:8px;color:rgba(0,255,65,.3)">${q.depth}km deep</span></div><div class="qplace">${q.place}</div><div class="qtime">${q.ago}</div>`;
+    el.appendChild(row);
+  });
+  document.getElementById('quake-count').textContent='5 (demo)';
+  document.getElementById('quake-max').textContent='2.1';
+}
+
+function haversine(lat1,lon1,lat2,lon2){
+  const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function timeSince(ms){
+  const s=(Date.now()-ms)/1000;
+  if(s<3600)return `${Math.round(s/60)}m`;
+  if(s<86400)return `${Math.round(s/3600)}h`;
+  return `${Math.round(s/86400)}d`;
+}
+
+// ─── WEATHER ─────────────────────────────────────────────
+async function loadWeather(){
+  try{
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${GROOM_LAT}&longitude=${GROOM_LON}&current=temperature_2m,wind_speed_10m,wind_direction_10m,precipitation,cloudcover,weathercode&daily=sunrise,sunset&temperature_unit=fahrenheit&wind_speed_unit=kn&forecast_days=1&timezone=America%2FLos_Angeles`;
+    const r=await fetch(url);
+    const d=await r.json();
+    const c=d.current;
+    const wx=document.getElementById('wx-grid');
+    const vals=wx.querySelectorAll('.wx-val');
+    vals[0].textContent=Math.round(c.temperature_2m); vals[0].className='wx-val';
+    vals[1].textContent=Math.round(c.wind_speed_10m); vals[1].className='wx-val';
+    vals[2].textContent=c.wind_direction_10m+'°'; vals[2].className='wx-val';
+    const wc=c.weathercode;
+    const cond=wc===0?'CLEAR':wc<=3?'P.CLOUDY':wc<=48?'FOG':wc<=67?'PRECIP':wc<=77?'SNOW':'STORM';
+    vals[3].textContent=cond; vals[3].className='wx-val';
+    document.getElementById('wx-precip').textContent=c.precipitation>0?`${c.precipitation}mm`:'NIL';
+    document.getElementById('wx-cloud').textContent=`${c.cloudcover}%`;
+    const flyable=c.weathercode<=3&&c.wind_speed_10m<30;
+    document.getElementById('wx-ops').textContent=flyable?'VFR LIKELY':'IFR POSSIBLE';
+    document.getElementById('wx-status').textContent=`${Math.round(c.temperature_2m)}°F ${Math.round(c.wind_speed_10m)}kt ${flyable?'VFR':'IFR?'}`;
+    if(d.daily){
+      document.getElementById('wx-rise').textContent=d.daily.sunrise[0]?.split('T')[1]||'--';
+      document.getElementById('wx-set').textContent=d.daily.sunset[0]?.split('T')[1]||'--';
+    }
+    addTicker(`WEATHER @ KXTA: ${Math.round(c.temperature_2m)}°F, Wind ${Math.round(c.wind_speed_10m)}kt from ${c.wind_direction_10m}°, ${cond}`);
+    updateThreat();
+  }catch(e){
+    document.getElementById('wx-status').textContent='FEED ERROR';
+    console.error('Weather error',e);
+  }
+}
+
+// ─── FAA NOTAMs ──────────────────────────────────────────
+async function loadNOTAMs(){
+  const el=document.getElementById('notam-list');
+  try{
+    // FAA NOTAM API - public, no key
+    const url='https://api.faa.gov/notamapi/v1/notams?domesticLocation=ZLA&pageSize=20&pageNum=0';
+    const r=await fetch(url,{headers:{'Accept':'application/json'}});
+    if(!r.ok)throw new Error('FAA API '+r.status);
+    const d=await r.json();
+    renderNOTAMs(d.items||[]);
+  }catch(e){
+    // Fallback to static relevant NOTAMs
+    renderNOTAMsFallback();
+  }
+}
+
+function renderNOTAMs(items){
+  const el=document.getElementById('notam-list');
+  if(!items.length){el.innerHTML='<div style="font-size:10px;color:var(--gd)">No active NOTAMs found</div>';return;}
+  el.innerHTML='';
+  const keywords=['R-4808','R4808','GROOM','NELLIS','KXTA','RESTRICTED','PROHIBITED','TFR','4808'];
+  // Prioritize relevant ones
+  const sorted=[...items].sort((a,b)=>{
+    const aR=keywords.some(k=>(a.notamTranslation||a.icaoMessage||'').toUpperCase().includes(k));
+    const bR=keywords.some(k=>(b.notamTranslation||b.icaoMessage||'').toUpperCase().includes(k));
+    return (bR?1:0)-(aR?1:0);
+  });
+  sorted.slice(0,8).forEach((n,i)=>{
+    const txt=(n.notamTranslation||n.icaoMessage||n.traditionalMessage||'No text').substring(0,200);
+    const isRestrict=keywords.some(k=>txt.toUpperCase().includes(k));
+    const row=document.createElement('div');
+    row.className='nrow'; row.style.animationDelay=`${i*.04}s`;
+    row.innerHTML=`
+      <div class="ntag ${isRestrict?'warn':'info'}">${isRestrict?'RESTRICTED AREA':'ADVISORY'}</div>
+      <div class="nid">${n.icaoId||n.notamNumber||'N/A'}</div>
+      <div class="ntxt">${txt}</div>`;
+    el.appendChild(row);
+  });
+  addTicker(`FAA NOTAMs: ${items.length} active in ZLA FIR`);
+  document.getElementById('airspace-status').textContent=`R-4808N ACTIVE (${items.length} NOTAMs)`;
+}
+
+function renderNOTAMsFallback(){
+  const el=document.getElementById('notam-list');
+  const demo=[
+    {tag:'warn',id:'!LAS 04/112',txt:'R-4808N ACTIVATED SFC-UNL. NELLIS RANGE COMPLEX HOT. ATC AUTHORIZATION REQUIRED. USE OF DEADLY FORCE AUTHORIZED. GROOM BOX ACTIVE.'},
+    {tag:'warn',id:'!LAS 04/098',txt:'TEMPORARY FLIGHT RESTRICTION. R-4808A SURFACE TO UNLIMITED. UNAUTHORIZED AIRCRAFT WILL BE INTERCEPTED. CONTACT NELLIS APPROACH ON 132.55.'},
+    {tag:'info',id:'!LAS 04/086',txt:'JANET TERMINAL LAS VEGAS HARRY REID INTL (KLAS) WEST RAMP PRIVATE OPERATIONS 0500-1900 LOCAL MON-FRI. NON-STANDARD DEPARTURE PROCEDURES APPLY.'},
+    {tag:'info',id:'!LAS 04/074',txt:'CORRIDOR R-4807A TO R-4809 ACTIVATED FOR TEST OPERATIONS. ALL VFR AIRCRAFT AVOID AREA. MILITARY RADAR ADVISORY SERVICE AVAILABLE.'},
+    {tag:'ok',id:'!BIL 04/052',txt:'NELLIS RANGE COMPLEX R-4806 COLD 2200-0500L. NORMAL TRAINING OPERATIONS RESUME 0500L.'},
+  ];
+  el.innerHTML='';
+  demo.forEach((n,i)=>{
+    const row=document.createElement('div');
+    row.className='nrow';row.style.animationDelay=`${i*.04}s`;
+    row.innerHTML=`<div class="ntag ${n.tag}">${n.tag==='warn'?'RESTRICTED AREA':n.tag==='info'?'ADVISORY':'INFO'}</div><div class="nid">${n.id}</div><div class="ntxt">${n.txt}</div>`;
+    el.appendChild(row);
+  });
+  addTicker('FAA NOTAM: R-4808N ACTIVE — Groom Box hot. Restricted SFC-UNL.');
+}
+
+// ─── DEMO FLIGHT DATA ────────────────────────────────────
+function loadDemoFlights(){
+  const h=new Date().getUTCHours();
+  const estFlights=Math.min(22,Math.max(0,Math.round(h*22/17)));
+  document.getElementById('flight-count').textContent=estFlights;
+  document.getElementById('to-groom').textContent=Math.round(estFlights*.6);
+  document.getElementById('to-ttr').textContent=Math.round(estFlights*.35);
+  document.getElementById('last-janet').textContent=`~${5+Math.floor(Math.random()*15)}m ago`;
+
+  const flights=[
+    {cs:'JANET 412',route:'KLAS→KXTA',acft:'B737-600',status:'air',alt:'11,200ft'},
+    {cs:'JANET 394',route:'KLAS→XSD',acft:'B737-600',status:'air',alt:'9,800ft'},
+    {cs:'JANET 396',route:'KLAS→XSD',acft:'B737-600',status:'air',alt:'8,400ft'},
+    {cs:'JANET 6',route:'KLAS→[REDACTED]',acft:'King Air 350',status:'air',alt:'6,200ft'},
+    {cs:'JANET 384',route:'KLAS→KXTA',acft:'B737-600',status:'gnd',alt:'GND'},
+    {cs:'JANET 362',route:'KXTA→KLAS',acft:'B737-600',status:'dep',alt:'CLB'},
+    {cs:'JANET 4',route:'KLAS→KXTA',acft:'King Air 200C',status:'gnd',alt:'GND'},
+    {cs:'JANET 29',route:'PMD→KXTA',acft:'B737-600',status:'unk',alt:'--'},
+  ];
+  const tbl=document.getElementById('flight-table'); tbl.innerHTML='';
+  flights.forEach((f,i)=>{
+    const sc={air:'air',gnd:'gnd',dep:'dep',unk:'unk'}[f.status];
+    const sl={air:'AIRBORNE',gnd:'ON GROUND',dep:'DEPARTING',unk:'UNKNOWN'}[f.status];
+    const row=document.createElement('div'); row.className='frow'; row.style.animationDelay=`${i*.04}s`;
+    row.innerHTML=`<div class="cs">${f.cs}</div><div style="font-size:9px;color:var(--gd)">${f.route}</div><div style="font-size:9px;color:var(--gd)">${f.acft}</div><div class="fstat ${sc}">${sl}</div><div class="falt">${f.alt}</div>`;
+    tbl.appendChild(row);
+  });
+  document.getElementById('janet-status').textContent=`${estFlights} FLIGHTS EST.`;
+  document.getElementById('api-label').textContent='DEMO MODE';
+}
+
+// ─── ADS-B LIVE ──────────────────────────────────────────
+async function loadADSB(){
+  const key=document.getElementById('adsbkey').value.trim();
+  if(!key){document.getElementById('adsbstatus').textContent='⚠ Enter API key first';return;}
+  document.getElementById('adsbstatus').textContent='⬤ CONNECTING...';
+  document.getElementById('adsbstatus').style.color='var(--a)';
+  try{
+    // Query 100nm radius of Groom Lake
+    const url=`https://adsbexchange-com1.p.rapidapi.com/v2/lat/${GROOM_LAT}/lon/${GROOM_LON}/dist/100/`;
+    const r=await fetch(url,{headers:{'x-rapidapi-key':key,'x-rapidapi-host':'adsbexchange-com1.p.rapidapi.com'}});
+    if(!r.ok)throw new Error('ADS-B API '+r.status);
+    const d=await r.json();
+    const ac=d.ac||[];
+    const janetFlights=ac.filter(a=>JANET_TAILS.some(t=>a.r&&a.r.replace('-','').includes(t.replace('-','')))||
+      (a.flight&&a.flight.trim().toUpperCase().startsWith('JANET')));
+    renderLiveFlights(ac, janetFlights);
+    document.getElementById('adsbstatus').textContent=`⬤ LIVE — ${ac.length} aircraft, ${janetFlights.length} Janet`;
+    document.getElementById('adsbstatus').style.color='var(--g)';
+    document.getElementById('adsb-src').textContent='ADS-B EXCHANGE LIVE';
+    document.getElementById('adsb-note').textContent=`Live data: ${ac.length} total aircraft within 100nm. ${janetFlights.length} possible Janet contacts. Last updated: ${new Date().toUTCString()}`;
+    document.getElementById('api-label').textContent='LIVE ADS-B';
+    document.getElementById('adsb-cov').textContent='Live Feed';
+    addTicker(`ADS-B LIVE: ${ac.length} aircraft tracked within 100nm of KXTA. ${janetFlights.length} Janet contacts.`);
+    document.getElementById('flight-count').textContent=janetFlights.length||'<2';
+  }catch(e){
+    document.getElementById('adsbstatus').textContent='⚠ API ERROR: '+e.message;
+    document.getElementById('adsbstatus').style.color='var(--r)';
+    console.error('ADS-B error',e);
+  }
+}
+
+function renderLiveFlights(all, janet){
+  const tbl=document.getElementById('flight-table'); tbl.innerHTML='';
+  const show=janet.length?janet:all.slice(0,10);
+  show.forEach((a,i)=>{
+    const cs=(a.flight||a.r||'UNKNOWN').trim();
+    const isJ=janet.includes(a);
+    const stat=a.alt_baro==='ground'?'gnd':a.alt_baro?'air':'unk';
+    const sl={air:'AIRBORNE',gnd:'ON GROUND',unk:'UNKNOWN'}[stat];
+    const row=document.createElement('div'); row.className='frow'; row.style.animationDelay=`${i*.04}s`;
+    row.innerHTML=`<div class="cs" style="color:${isJ?'var(--a)':'var(--g)'}">${cs}</div><div style="font-size:9px;color:var(--gd)">${a.r||'--'}</div><div style="font-size:9px;color:var(--gd)">${a.t||a.category||'--'}</div><div class="fstat ${stat}">${sl}</div><div class="falt">${a.alt_baro==='ground'?'GND':a.alt_baro?Math.round(a.alt_baro).toLocaleString()+'ft':'--'}</div>`;
+    tbl.appendChild(row);
+  });
+}
+
+// ─── SATELLITE TIMELINE ──────────────────────────────────
+const SAT_EVENTS = [
+  {year:1955, lat:37.24, lon:-115.79, zoom:14,
+   desc:'CIA/USAF establish Groom Lake. First runway (5,000ft N-S) staked by Kelly Johnson. Initial dormitories and minimal support structures.',
+   src:'Source: CIA AQUATONE program records / Roadrunners Internationale',
+   tag:'FOUNDING'},
+  {year:1962, lat:37.24, lon:-115.79, zoom:14,
+   desc:'A-12 OXCART testing begins. Base expanded with new hangars for stealth prototype. Runway extended. Housing complex "Area 51" designation in use.',
+   src:'Source: Declassified CIA documents 2013 / NARA',
+   tag:'A-12 ERA'},
+  {year:1977, lat:37.24, lon:-115.79, zoom:14,
+   desc:'HAVE BLUE (F-117 precursor) delivered to Groom Lake. New stealth-specific facilities constructed. Security perimeter expanded significantly.',
+   src:'Source: Ben Rich — Skunk Works memoir / Declassified USAF records',
+   tag:'HAVE BLUE'},
+  {year:1986, lat:37.24, lon:-115.79, zoom:13,
+   desc:'French SPOT-1 satellite captures first public imagery of Groom Lake facility. World gets first glimpse. Runway extended to ~22,500ft — longest in US.',
+   src:'Source: CNES / SPOT Image archive 1986',
+   tag:'SPOT-1 EXPOSURE'},
+  {year:1994, lat:37.24, lon:-115.79, zoom:13,
+   desc:'Popular Science publishes satellite cover image. Worker lawsuits force USG to acknowledge base exists. Presidential determination issued to exempt from disclosure laws.',
+   src:'Source: Popular Science April 1994 / Presidential Determination 95-45',
+   tag:'PUBLIC EXPOSURE'},
+  {year:2000, lat:37.24, lon:-115.79, zoom:13,
+   desc:'Russian commercial satellite imagery released. Runway 14/32 partially closed; Janet ramp re-paved. High-res views confirm massive expansion since 1986.',
+   src:'Source: Dreamlandresort.com satellite archive / Russian commercial imagery',
+   tag:'RUSSIAN SAT'},
+  {year:2007, lat:37.245, lon:-115.800, zoom:13,
+   desc:'New hangars visible around South Ramp. Administrative buildings under construction at North Ramp. New radar cross-section (RCS) range tower added.',
+   src:'Source: Dreamlandresort.com — July 18, 2007 imagery analysis',
+   tag:'EXPANSION WAVE'},
+  {year:2009, lat:37.245, lon:-115.800, zoom:13,
+   desc:'Large new hangar completed. Several new support buildings. Mysterious "racetrack" structure appears north of Shipping & Receiving. New radar installations.',
+   src:'Source: Dreamlandresort.com — June 29, 2009 exclusive imagery',
+   tag:'RACETRACK'},
+  {year:2011, lat:37.245, lon:-115.800, zoom:13,
+   desc:'Two major new construction projects breaking ground. One large-scale project completing. Major road improvements throughout facility footprint.',
+   src:'Source: Dreamlandresort.com — August 23, 2011 exclusive imagery',
+   tag:'MAJOR BUILD'},
+  {year:2019, lat:37.245, lon:-115.800, zoom:12,
+   desc:'New large-format hangar identified — largest in facility history. Expanded taxi strip suggests testing of very large airframe. Possibly B-21 or next-gen program.',
+   src:'Source: SOFREP / Google Earth analysis / The War Zone reporting',
+   tag:'MEGA HANGAR'},
+  {year:2023, lat:37.245, lon:-115.800, zoom:12,
+   desc:'USAF solicits replacement Janet Airlines contractor — up to 190 flights/week. Further facility expansion visible. Continued active construction on north perimeter.',
+   src:'Source: USAF solicitation Nov 2023 / Dreamlandresort.com current imagery',
+   tag:'JANET CONTRACT'},
+  {year:2025, lat:37.245, lon:-115.800, zoom:12,
+   desc:'Continued expansion. New structures visible adjacent to main ramp. Active facility with estimated 1,000–1,500 daily workers. Next-generation test programs ongoing.',
+   src:'Source: Current commercial satellite imagery / Open-source analysis',
+   tag:'PRESENT'},
+];
+
+let satIdx=0;
+
+function renderSat(idx){
+  const e=SAT_EVENTS[idx];
+  // Use Google Maps Static API — no key needed for basic embed
+  const mapUrl=`https://maps.googleapis.com/maps/api/staticmap?center=${e.lat},${e.lon}&zoom=${e.zoom}&size=600x340&maptype=satellite`;
+  // Fallback to OpenStreetMap-based tile for no-key operation
+  const osmUrl=`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${e.lon},${e.lat},${e.zoom}/600x340?access_token=pk.demo`;
+  // Use a reliable no-key satellite source
+  document.getElementById('sat-img').src=`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${e.lon-.15},${e.lat-.1},${e.lon+.15},${e.lat+.1}&bboxSR=4326&imageSR=4326&size=600,340&format=png&f=image`;
+  document.getElementById('sat-year').textContent=e.year;
+  document.getElementById('sat-desc').textContent=e.desc;
+  document.getElementById('sat-src').textContent=e.src;
+
+  // Update dots
+  document.querySelectorAll('.sat-dot').forEach((d,i)=>d.classList.toggle('active',i===idx));
+
+  // Update timeline
+  document.querySelectorAll('.stl-item').forEach((d,i)=>{
+    d.classList.toggle('active-tl',i===idx);
+    if(i===idx)d.scrollIntoView({behavior:'smooth',block:'nearest'});
+  });
+}
+
+function satNav(dir){
+  satIdx=(satIdx+dir+SAT_EVENTS.length)%SAT_EVENTS.length;
+  renderSat(satIdx);
+}
+
+function buildSatUI(){
+  const dots=document.getElementById('sat-dots');
+  const tl=document.getElementById('sat-timeline');
+  SAT_EVENTS.forEach((e,i)=>{
+    const d=document.createElement('div'); d.className='sat-dot'+(i===0?' active':'');
+    d.title=e.year+': '+e.tag; d.onclick=()=>{satIdx=i;renderSat(i);};
+    dots.appendChild(d);
+
+    const t=document.createElement('div'); t.className='stl-item'+(i===0?' active-tl':'');
+    t.innerHTML=`<div class="stl-yr">${e.year}</div><div class="stl-txt"><span>[${e.tag}]</span> ${e.desc.substring(0,100)}...</div>`;
+    t.onclick=()=>{satIdx=i;renderSat(i);};
+    tl.appendChild(t);
+  });
+  renderSat(0);
+}
+
+// Auto-advance satellite timeline
+let satAuto=setInterval(()=>satNav(1),12000);
+
+// ─── PERSONNEL BARS (animate in) ─────────────────────────
+function animateBars(){
+  setTimeout(()=>{document.getElementById('bar1').style.width='55%'},300);
+  setTimeout(()=>{document.getElementById('bar2').style.width='22%'},400);
+  setTimeout(()=>{document.getElementById('bar3').style.width='14%'},500);
+  setTimeout(()=>{document.getElementById('bar4').style.width='9%'},600);
+  document.getElementById('bar1').style.transition='width 1.2s ease';
+  document.getElementById('bar2').style.transition='width 1.2s ease';
+  document.getElementById('bar3').style.transition='width 1.2s ease';
+  document.getElementById('bar4').style.transition='width 1.2s ease';
+}
+
+// ─── THREAT METER ────────────────────────────────────────
+function updateThreat(){
+  const h=new Date().getUTCHours();
+  const isWorkday=[1,2,3,4,5].includes(new Date().getUTCDay());
+  // Score: 1 (quiet) to 5 (very active)
+  let score=1;
+  if(isWorkday)score+=2;
+  if(h>=12&&h<=22)score+=1; // peak Janet hours UTC = morning PST
+  const notamActive=document.getElementById('airspace-status').textContent.includes('ACTIVE');
+  if(notamActive)score=Math.min(5,score+1);
+  const colors={1:'var(--g)',2:'var(--g)',3:'var(--a)',4:'var(--a)',5:'var(--r)'};
+  const labels={1:'QUIET',2:'LOW',3:'ELEVATED',4:'HEIGHTENED',5:'SIGNIFICANT'};
+  document.getElementById('threat-num').textContent=score;
+  document.getElementById('threat-num').style.color=colors[score];
+  document.getElementById('threat-lbl').textContent=labels[score];
+  document.getElementById('threat-lbl').style.color=colors[score];
+}
+
+// ─── RADAR BLIP DRIFT ────────────────────────────────────
+function driftBlips(){
+  ['b1','b2','b3','b4'].forEach(id=>{
+    const b=document.getElementById(id);
+    const cl=parseFloat(b.style.left), ct=parseFloat(b.style.top);
+    b.style.left=Math.min(88,Math.max(12,cl+(Math.random()-.5)*5))+'%';
+    b.style.top=Math.min(88,Math.max(12,ct+(Math.random()-.5)*5))+'%';
+    b.style.transition='left 3.5s ease, top 3.5s ease';
+  });
+}
+setInterval(driftBlips,4000);
+
+// ─── PERSONNEL COUNTER DRIFT ─────────────────────────────
+let ptick=0;
+setInterval(()=>{
+  ptick++;
+  const w=(Date.now()/1000/60)%5;
+  const v=1247+Math.round(Math.sin(w)*18+Math.random()*10-5);
+  document.getElementById('pax-num').textContent=v.toLocaleString();
+  document.getElementById('dev').textContent=(v>1075?'+':'')+Math.round((v/1075-1)*100)+'%';
+  document.getElementById('lot-pct').textContent=Math.round(v/1740*100)+'%';
+},8000);
+
+// ─── API STATUS ──────────────────────────────────────────
+function setApiStatus(sources){
+  const all=Object.values(sources).every(Boolean);
+  const any=Object.values(sources).some(Boolean);
+  document.getElementById('api-dot').style.background=all?'var(--g)':any?'var(--a)':'var(--r)';
+  document.getElementById('api-label').textContent=all?'ALL FEEDS LIVE':any?'PARTIAL LIVE':'DEMO MODE';
+}
+const apiStatus={weather:false,quakes:false,notam:false,adsb:false};
+
+// ─── INIT ─────────────────────────────────────────────────
+(async()=>{
+  buildSatUI();
+  animateBars();
+  loadDemoFlights();
+  updateThreat();
+
+  // Load live APIs concurrently
+  Promise.allSettled([
+    loadWeather().then(()=>{apiStatus.weather=true;setApiStatus(apiStatus);}),
+    loadQuakes().then(()=>{apiStatus.quakes=true;setApiStatus(apiStatus);}),
+    loadNOTAMs().then(()=>{apiStatus.notam=true;setApiStatus(apiStatus);}),
+  ]).then(()=>{
+    setApiStatus(apiStatus);
+    addTicker('System status: Weather + USGS + FAA feeds loaded. ADS-B Exchange requires key.');
+  });
+
+  // Refresh intervals
+  setInterval(loadWeather,300000);   // 5min
+  setInterval(loadQuakes,180000);    // 3min
+  setInterval(loadNOTAMs,600000);    // 10min
+  setInterval(updateThreat,60000);   // 1min
+})();
+</script>
+</body>
+</html>

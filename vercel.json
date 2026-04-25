@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    { "source": "/api/weather", "destination": "/api/weather" },
+    { "source": "/api/quakes", "destination": "/api/quakes" },
+    { "source": "/api/notams", "destination": "/api/notams" },
+    { "source": "/api/adsb", "destination": "/api/adsb" }
+  ]
+}
